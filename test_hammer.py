@@ -18,7 +18,6 @@ servo = AngularServo(
 
 try:
     print("ハンマーを振り上げます（待機状態）...")
-    # ※ここはすでにinitial_angleで-90度にいるので、servo.angle = -90 は省略して待つだけにします
     sleep(2)
     for i in range(10):
         print("ピコッ！！（振り下ろす）")
