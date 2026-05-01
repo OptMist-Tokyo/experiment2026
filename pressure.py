@@ -6,7 +6,6 @@ from gpiozero import OutputDevice
 sensor_power = OutputDevice(26)
 sensor_power.on() # ここで3.3Vの電気が流れ始める
 
-# --- この下から通常のセンサー読み取り処理を書く ---
 # SPI通信のセットアップ
 spi = spidev.SpiDev()
 spi.open(1, 2)             # バス0, CS0 (CE0: 24番ピン) を使用
