@@ -3,7 +3,7 @@ import time
 
 # SPI通信のセットアップ
 spi = spidev.SpiDev()
-spi.open(0, 0)             # バス0, CS0 (CE0: 24番ピン) を使用
+spi.open(1, 2)             # バス0, CS0 (CE0: 24番ピン) を使用
 spi.max_speed_hz = 1350000 # 通信速度の設定
 
 def read_adc(channel):
