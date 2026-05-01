@@ -103,7 +103,7 @@
 - [ディスプレイ](https://www.amazon.co.jp/OSOYOO-3-5%E3%82%A4%E3%83%B3%E3%83%81LCD%E3%83%87%E3%82%A3%E3%82%B9%E3%83%97%E3%83%AC%E3%82%A4-%E3%82%BF%E3%83%83%E3%83%81%E3%82%B9%E3%82%AF%E3%83%AA%E3%83%BC%E3%83%B3-Raspberry-Model/dp/B01N5HW3BP?th=1)
 - [ピコピコハンマー](https://www.amazon.co.jp/%E3%83%8F%E3%83%B3%E3%83%9E%E3%83%BC%E3%83%91%E3%83%B3%E3%83%81-%E3%81%9F%E3%81%9F%E3%81%8F%E3%81%A8%E3%83%94%E3%82%B3%E3%83%94%E3%82%B3%E9%9F%B3%E3%81%8C%E9%B3%B4%E3%82%8B%E3%83%94%E3%82%B3%E3%83%94%E3%82%B3%E3%83%8F%E3%83%B3%E3%83%9E%E3%83%BC%E3%81%A7%E3%81%99-%E3%81%8A%E4%BB%95%E7%BD%AE%E3%81%8D-%E3%83%91%E3%83%BC%E3%83%86%E3%82%A3%E3%83%BC-%E7%9B%9B%E3%82%8A%E4%B8%8A%E3%81%8C%E3%82%8B%E3%82%A2%E3%82%A4%E3%83%86%E3%83%A0%E3%81%A7%E3%81%99/dp/B0DWRYYY71/ref=sr_1_9?__mk_ja_JP=%E3%82%AB%E3%82%BF%E3%82%AB%E3%83%8A&crid=2J582P73O6BCV&dib=eyJ2IjoiMSJ9.uNbosAR-uOWJ27R1HXB6FTOh6DeuMcXdhnIsLiS10BW52ca5IE7u5POkOvaFT5sCEegZ7bGNMn9UL0piVy-OEUwd4krQWJXb4eU4nOdrBlLjC1VubkFWS8RYXVlGR4nqQWfgdJj7aNgyAAHVJEqoAXxyeJKdWHxaW1V1u53bMPH_RSs3SMMHSiwKMUGUhqNU67u90YqgzGjo8kjbaJgQFLfDQu5M2TFQnfE-zCRH6V1TjzAu56R8U-CtfP8W4y1nfYm9b4UteNmpBKhZ_THZix_xVypnoCaWEIpxIAbY9WY.53KGX8YJqGroXvbkpCzeeWGQyvJ9XYmGawxWIMxZ45k&dib_tag=se&keywords=%E3%83%94%E3%82%B3%E3%83%94%E3%82%B3%E3%83%8F%E3%83%B3%E3%83%9E%E3%83%BC&qid=1776410029&sprefix=%E3%83%94%E3%82%B3%E3%83%94%E3%82%B3%E3%83%8F%E3%83%B3%E3%83%9E%E3%83%BC%2Caps%2C205&sr=8-9)
 次回以降購入かも
-- クランプ
+- [クランプ](https://www.amazon.co.jp/%E9%AB%98%E5%84%80-TAKAGI-%E5%BC%B7%E5%8A%9B%E5%9E%8B-C%E3%82%AF%E3%83%A9%E3%83%B3%E3%83%97-100mm/dp/B006JZI80E/ref=sr_1_3?__mk_ja_JP=%E3%82%AB%E3%82%BF%E3%82%AB%E3%83%8A&crid=2GXUMG859R0P7&dib=eyJ2IjoiMSJ9.dONHMEwtmXKKmHuuprlyleGcRr1o1ricb8-3p6d9BumFyf8KRNGXSg4WNEDydUqZI3z2LEg2ZWwb6uL8b92Bgp3FfuNMwGmvtjrz9LOQiJzpBgu9EHmjL6W9-MR7iT0Vt4FGwYoBhiuDaImDu4rRpuH547xfDcj69IvntgspxkiSAxfAOp_xYrFrshMMB2j2Y_qhIMcPz65Io9HmHHMJGWOKEfadQZDVrj7rxSY51S5hDGmfEAxm6FC5A4Wn1wmTIhTjqKBTv_QAJie_kzkFSsyC2AoPmqFweuB43CZ2KEk.KV8z_yPMseRBgha_oqYh9BiT2QzBkFjrhHxmlAiNTAc&dib_tag=se&keywords=%E9%AB%98%E5%84%80%2B%E3%82%B7%E3%83%A3%E3%82%B3%E4%B8%87%E5%8A%9B&qid=1777611491&s=diy&sprefix=%E9%AB%98%E5%84%80%E5%BC%8F%2B%E3%82%B7%E3%83%A3%E3%82%B3%E4%B8%87%E5%8A%9B%2Cdiy%2C147&sr=1-3&th=1)
 - 木材
 - サーボブラケット
 
@@ -139,4 +139,23 @@
 - 箱作り
 - ブザーの回路組む
 - 諸々の連携
+
+## 2026-05-01
+### チームごとに作業
+
+### やったこと
+- 前回の最後に起動しなくなったraspberry piを直した
+- サーボモータと圧力センサのブレッドボードを一つに統合
+- 圧力センサの動作確認
+- 液晶、圧力センサ、サーボモータを同時に接続できるようにした
+
+### 残りのTodo
+
+- 電子ブザーを動くようにする
+- ピコハンのクランプによる固定
+- 圧力センサの閾値判定
+- スヌーズ機能
+- ３つの機能をソフトウェアとして統合
+  - 時計をメインとしつつ他の機能を関数として呼び出せばできそう
+- 見た目をもう少し整えましょう
 
