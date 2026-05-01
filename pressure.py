@@ -8,7 +8,7 @@ sensor_power.on() # ここで3.3Vの電気が流れ始める
 
 # SPI通信のセットアップ
 spi = spidev.SpiDev()
-spi.open(1, 2)             # バス0, CS0 (CE0: 24番ピン) を使用
+spi.open(1, 2)             # バス1(SPI1), CS2 (CE2: GPIO16/物理36番ピン) を使用
 spi.max_speed_hz = 1350000 # 通信速度の設定
 
 def read_adc(channel):
