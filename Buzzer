@@ -1,0 +1,22 @@
+from gpiozero import PWMOutputDevice
+from time import sleep
+
+# GPIO 17番ピンを使用
+buzzer = PWMOutputDevice(17)
+
+def play_tone(frequency, volume):
+    # frequency: 周波数 (Hz)
+    # volume: 音量 (0.0 ～ 1.0) ※0.5が最大効率（音量）
+    buzzer.frequency = frequency
+    buzzer.value = volume / 2  # デューティ比を調整
+
+print("音量テスト開始")
+try:
+    for v in [0.5]:
+       # print(f"音量: {v}")
+       for i in range(6):
+            play_tone(i*500+500, v) #500Hz,1000Hz,...
+            sleep(5)
+    buzzer.off()
+except KeyboardInterrupt:
+    buzzer.off()
