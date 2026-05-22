@@ -2,11 +2,8 @@ from gpiozero import AngularServo
 from gpiozero.pins.pigpio import PiGPIOFactory
 from time import sleep
 
-# 正確なリズムを刻む魔法の工場
 factory = PiGPIOFactory()
 
-# ★変更点：最後に「initial_angle=-90」を追加！
-# これで「最初は-90度の位置にいるよ」とモーターに教え、無駄なピクつきを防ぎます
 servo = AngularServo(
     18, 
     min_angle=-90, 
@@ -19,7 +16,7 @@ servo = AngularServo(
 
 try:
     print("ハンマーを振り上げます（待機状態）...")
-    servo.angle = 90 # ※ここはすでにinitial_angleで-90度にいるので、servo.angle = -90 は省略して待つだけにします
+    servo.angle = 90 
     sleep(2)
     for i in range(10):
         print("ピコッ！！（振り下ろす）")
