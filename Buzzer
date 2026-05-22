@@ -10,13 +10,25 @@ def play_tone(frequency, volume):
     buzzer.frequency = frequency
     buzzer.value = volume / 2  # デューティ比を調整
 
-print("音量テスト開始")
+def stop_tone():
+    buzzer.value = 0  # 音を止める（デューティ比0）
+
+print("キッチンタイマー風アラーム開始")
 try:
-    for v in [0.5]:
-       # print(f"音量: {v}")
-       for i in range(6):
-            play_tone(i*500+500, v) #500Hz,1000Hz,...
-            sleep(5)
+    # 10回「ピピッ」の塊を繰り返す
+    for _ in range(10):
+        # 「ピピッ」の1セット
+        for _ in range(2):
+            play_tone(3200, 0.5)  # 3000Hz（高めのピピッという音）
+            sleep(0.1)            # 0.1秒鳴らす
+            stop_tone()           # 音を止める
+            sleep(0.05)           # 0.05秒の短い隙間（ピ と ピ の間）
+        
+        # 「ピピッ」と次の「ピピッ」の間の無音時間
+        sleep(0.6)
+
     buzzer.off()
+    print("アラーム終了")
+
 except KeyboardInterrupt:
     buzzer.off()
