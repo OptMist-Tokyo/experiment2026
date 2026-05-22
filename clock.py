@@ -28,9 +28,9 @@ def trigger_alarm():
     # スヌーズを実行する関数
     def start_snooze():
         alarm_win.destroy()      # ウィンドウを閉じる
-        label.config(fg="green")
-        root.after(300000, trigger_alarm) # 5分(300,000ms)後に再発動
-        print("Snoozing for 5 minutes...")
+        label.config(fg="white")
+        root.after(60000, trigger_alarm) # 5分(300,000ms)後に再発動
+        print("Snoozing for 1 minute...")
 
     # 2. 「30秒間反応がなければ自動でスヌーズ」を予約
     # 何も押さなくても、30秒後に start_snooze が実行される
@@ -40,10 +40,10 @@ def trigger_alarm():
     def stop_alarm():
         root.after_cancel(auto_snooze_job) # 自動スヌーズの予約を取り消す
         alarm_win.destroy()
-        label.config(fg="green")
+        label.config(fg="white")
 
     # ボタンの配置
-    tk.Button(alarm_win, text="Snooze (5 min)", command=start_snooze, bg="orange", pady=10).pack(fill="x", padx=20)
+    tk.Button(alarm_win, text="Snooze (1 min)", command=start_snooze, bg="orange", pady=10).pack(fill="x", padx=20)
     tk.Button(alarm_win, text="Dismiss", command=stop_alarm, bg="lightgrey").pack(pady=10)
 
 # --- 画面切り替え関数 ---
@@ -69,7 +69,7 @@ label = tk.Label(clock_frame, font=("Arial", 80), fg="white", bg="black")
 label.pack(expand=True)
 
 btn_setup = tk.Button(clock_frame, text="set alerm time", command=show_setting, 
-                      bg="#333", fg="black", font=("Arial", 15), padx=20, pady=10)
+                      bg="#333", fg="white", font=("Arial", 15), padx=20, pady=10)
 btn_setup.pack(pady=20)
 
 clock_frame.pack(fill="both", expand=True) # 初期表示
@@ -92,7 +92,7 @@ min_spin = tk.Spinbox(spin_container, from_=0, to=59, width=3, font=("Arial", 50
 min_spin.pack(side=tk.LEFT, padx=10)
 
 btn_done = tk.Button(setting_frame, text="set and back to clock", command=show_clock, 
-                     bg="green", fg="black", font=("Arial", 15), padx=20, pady=10)
+                     bg="white", fg="black", font=("Arial", 15), padx=20, pady=10)
 btn_done.pack(pady=30)
 
 # ================= 実行 =================
