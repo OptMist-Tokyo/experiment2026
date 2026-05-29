@@ -11,11 +11,8 @@ from gpiozero.pins.pigpio import PiGPIOFactory
 # =====================================================================
 #  ハードウェア初期化
 # =====================================================================
-# --- ブザー（GPIO17） ---
 buzzer = PWMOutputDevice(17)
 
-# --- サーボ／ハンマー（GPIO18, pigpio経由） ---
-# 注意: 事前に `sudo pigpiod` でデーモンを起動しておくこと
 servo_factory = PiGPIOFactory()
 servo = AngularServo(
     18,
@@ -27,9 +24,8 @@ servo = AngularServo(
     pin_factory=servo_factory,
 )
 
-# --- 圧力センサー電源（GPIO26）＋ SPI（バス1/CS2, ch0） ---
 sensor_power = OutputDevice(26)
-sensor_power.on()  # 起動時に電源オン、以降は常時オン
+sensor_power.on()
 
 spi = spidev.SpiDev()
 spi.open(1, 2)
@@ -37,7 +33,6 @@ spi.max_speed_hz = 1350000
 
 
 def cleanup():
-    """終了時にすべてのデバイスを安全に止める"""
     try:
         buzzer.off()
     except Exception:
@@ -72,24 +67,22 @@ def stop_tone():
 
 
 def buzz_once(stop_event):
-    """「ピピッ×10回」を1サイクル鳴らす。stop_event が立ったら即中断。"""
     for _ in range(10):
         for _ in range(2):
             if stop_event.is_set():
                 stop_tone()
                 return
-            play_tone(2800, 0.5)
+            play_tone(3200, 0.5)
             sleep(0.1)
             stop_tone()
             sleep(0.05)
-        for _ in range(12):  # 0.6秒の無音を細かく刻む（中断に素早く反応するため）
+        for _ in range(12):
             if stop_event.is_set():
                 return
             sleep(0.05)
 
 
 def buzz_loop(stop_event):
-    """stop_event が立つまでブザーを鳴らし続ける"""
     while not stop_event.is_set():
         buzz_once(stop_event)
     stop_tone()
@@ -99,7 +92,6 @@ def buzz_loop(stop_event):
 #  圧力センサー
 # =====================================================================
 def read_adc(channel):
-    """MCP3008から指定チャンネル(0〜7)のアナログ値を読み取る"""
     if channel < 0 or channel > 7:
         return -1
     command = [1, (8 + channel) << 4, 0]
@@ -109,10 +101,6 @@ def read_adc(channel):
 
 
 def is_awake(threshold=300, check_duration=3.0, interval=0.2):
-    """
-    一定時間センサーを監視し、起きているか（ベッドから離れているか）を判定する。
-    半分以上の測定でしきい値を下回れば「起きた」とみなす。
-    """
     print("🛏️ センサーでベッドの状態を確認中...")
     empty_count = 0
     total_checks = 0
@@ -133,8 +121,7 @@ def is_awake(threshold=300, check_duration=3.0, interval=0.2):
 #  ハンマー制御
 # =====================================================================
 def hammer_strike(times, stop_event):
-    """ハンマーを指定回数振り下ろす。stop_event が立ったら即中断。"""
-    servo.angle = 90  # 振り上げ（待機位置）
+    servo.angle = 90
     sleep(0.5)
     for i in range(times):
         if stop_event.is_set():
@@ -144,130 +131,110 @@ def hammer_strike(times, stop_event):
         sleep(0.3)
         servo.angle = 90
         sleep(0.3)
-    servo.angle = 0  # 中立位置へ戻す
+    servo.angle = 0
 
 
 # =====================================================================
-#  アラームシーケンス（フローチャート通り）
+#  アラームシーケンス（更新後フローチャート）
 #
-#  [アラーム時刻]
+#  n ← 0
 #      ↓
-#  [圧力チェック] → 起きていたら → [停止]
-#      ↓ 寝ている
-#  [ブザーON]
-#      ↓
-#  [スヌーズ押す？] ←─────────────────────────────┐
-#    押さない（30秒）↓      押す↓                        │
-#                   │   [ブザーOFF → 1分待機]              │
-#                   │       ↓                              │
-#                   │   [圧力チェック] → 起きていたら → [停止]│
-#                   │       ↓ 寝ている                     │
-#                   ↓   [ブザー＋ハンマー]                  │
-#              [圧力チェック] → 起きていたら → [停止]        │
-#                   ↓ 寝ている                             │
-#              [ブザー＋ハンマー]                           │
-#                   └──────────────────────────────────────┘
+#  [圧力チェック] ←─────────────────────────────┐
+#      ↓ 起きていたら → [finish]                  │
+#      ↓ 寝ている                                  │
+#  [ブザーON]                                     │
+#      ↓                                          │
+#  [Dismiss押下 or 30秒経過]                       │
+#      ↓                                          │
+#  [ブザーOFF → 1分待機]                          │
+#      ↓                                          │
+#  [beat: n*10回叩く(ブザーON継続)]                │
+#      ↓                                          │
+#  [n++]                                          │
+#      └──────────────────────────────────────────┘
 # =====================================================================
-
-# スヌーズボタンが押されたことをシーケンスに伝えるイベント
-snooze_event = None
-# シーケンス全停止イベント
 stop_event = None
-# アラームシーケンスのスレッド
+snooze_event = None
 alarm_thread = None
 
 
 def alarm_sequence(stop_ev, snooze_ev, on_finish):
     """
-    フローチャートに沿ったアラームシーケンス。別スレッドで実行。
-    stop_ev  : Dismiss または起床確認でセット → 全停止
-    snooze_ev: スヌーズボタンでセット → ブザーOFF＋1分待機後に再判定
+    stop_ev  : Dismiss は使わない。起床確認時にセットして全停止
+    snooze_ev: アラーム画面の「Dismiss」ボタン押下で30秒待ちをスキップ
     on_finish: シーケンス終了時のGUIコールバック
     """
+    n = 0  # 周回カウンタ。beat回数は n*10
     try:
-        # ── ステップ1: 最初の圧力チェック ──────────────────────────
-        if is_awake():
-            print("✅ すでに起きています。アラーム停止。")
-            stop_ev.set()
-            on_finish()
-            return
-
-        # ── ステップ2: ブザーON（別スレッドで鳴らし続ける） ─────────
-        # ブザー専用の停止イベント（スヌーズ時にブザーだけ止めるために使う）
-        buzz_stop = threading.Event()
-        buzz_thread = threading.Thread(
-            target=buzz_loop, args=(buzz_stop,), daemon=True
-        )
-        buzz_thread.start()
-        print("🔔 ブザーON")
-
-        # ── メインループ ─────────────────────────────────────────
         while not stop_ev.is_set():
 
-            # ── ステップ3: スヌーズを30秒待つ ───────────────────────
+            # ── ステップ1: 圧力チェック ──────────────────────
+            if is_awake():
+                print("✅ 起床確認。叩かず終了 (n={})".format(n))
+                stop_ev.set()
+                break
+
+            # ── ステップ2: ブザーON ──────────────────────────
+            buzz_stop = threading.Event()
+            buzz_thread = threading.Thread(
+                target=buzz_loop, args=(buzz_stop,), daemon=True
+            )
+            buzz_thread.start()
+            print("🔔 ブザーON (周回 n={})".format(n))
+
+            # ── ステップ3: 30秒待つ(Dismissで早送り可) ────────
             snooze_ev.clear()
             wait_start = time()
             while time() - wait_start < 30:
                 if stop_ev.is_set():
                     break
                 if snooze_ev.is_set():
+                    print("💤 Dismiss押下: 30秒待ちをスキップ")
+                    break
+                sleep(0.1)
+
+            if stop_ev.is_set():
+                buzz_stop.set()
+                buzz_thread.join(timeout=3)
+                break
+
+            # ── ステップ4: ブザーOFF → 1分待機 ───────────────
+            print("🔕 ブザーOFF → 1分待機")
+            buzz_stop.set()
+            buzz_thread.join(timeout=3)
+
+            wait_start = time()
+            while time() - wait_start < 60:
+                if stop_ev.is_set():
                     break
                 sleep(0.1)
 
             if stop_ev.is_set():
                 break
 
-            if snooze_ev.is_set():
-                # ── スヌーズルート ────────────────────────────────
-                print("💤 スヌーズ: ブザーOFF → 1分待機")
-                buzz_stop.set()   # ブザーだけ止める
-                buzz_thread.join(timeout=3)
-
-                # 1分待機（stop_ev に反応できるよう細かく刻む）
-                wait_start = time()
-                while time() - wait_start < 60:
-                    if stop_ev.is_set():
-                        break
-                    sleep(0.1)
-
-                if stop_ev.is_set():
-                    break
-
-                # 圧力チェック
-                if is_awake():
-                    print("✅ 起床確認。停止。")
-                    stop_ev.set()
-                    break
-
-                # まだ寝ている → ブザー＋ハンマー
-                print("⏰ まだ寝ています。ブザー＋ハンマー開始。")
+            # ── ステップ5: beat (n*10回叩く、ブザーON継続) ───
+            beat_count = n * 10
+            if beat_count > 0:
+                print("⏰ ブザー＋ハンマー {}回".format(beat_count))
                 buzz_stop = threading.Event()
                 buzz_thread = threading.Thread(
                     target=buzz_loop, args=(buzz_stop,), daemon=True
                 )
                 buzz_thread.start()
-                hammer_strike(30, stop_ev)
 
+                hammer_strike(beat_count, stop_ev)
+
+                buzz_stop.set()
+                buzz_thread.join(timeout=3)
             else:
-                # ── 30秒無反応ルート ──────────────────────────────
-                # 圧力チェック
-                if is_awake():
-                    print("✅ 起床確認。停止。")
-                    stop_ev.set()
-                    break
+                print("⏰ 1周目につき叩かない (n=0)")
 
-                # まだ寝ている → ブザー＋ハンマー（ブザーはすでに鳴っている）
-                print("⏰ まだ寝ています。ハンマー開始。")
-                hammer_strike(30, stop_ev)
+            # ── ステップ6: n++ ───────────────────────────────
+            n += 1
 
-            # ハンマー後にまたスヌーズ待ちのループ先頭へ戻る
+            # ループ先頭(圧力チェック)へ戻る
 
     finally:
-        # 後片付け
-        try:
-            buzz_stop.set()
-        except Exception:
-            pass
         stop_tone()
         try:
             servo.angle = 0
@@ -279,20 +246,26 @@ def alarm_sequence(stop_ev, snooze_ev, on_finish):
 # =====================================================================
 #  GUI
 # =====================================================================
+last_fired_minute = None
+
+
 def update_time():
+    global last_fired_minute
     now = datetime.now()
     time_label.config(text=now.strftime("%H:%M:%S"))
 
     alarm_h = hour_spin.get().zfill(2)
     alarm_m = min_spin.get().zfill(2)
-    # シーケンス未稼働のときだけ発火（多重発火防止）
-    if (now.strftime("%H") == alarm_h
-            and now.strftime("%M") == alarm_m
-            and now.second == 0
+    current_minute = now.strftime("%H:%M")
+    alarm_minute   = "{}:{}".format(alarm_h, alarm_m)
+
+    if (current_minute == alarm_minute
+            and current_minute != last_fired_minute
             and (alarm_thread is None or not alarm_thread.is_alive())):
+        last_fired_minute = current_minute
         trigger_alarm()
 
-    root.after(1000, update_time)
+    root.after(200, update_time)
 
 
 def trigger_alarm():
@@ -302,7 +275,6 @@ def trigger_alarm():
     stop_event = threading.Event()
     snooze_event = threading.Event()
 
-    # ── アラームポップアップ ──────────────────────────────────────
     alarm_win = tk.Toplevel(root)
     alarm_win.title("Alarm")
     alarm_win.attributes("-fullscreen", True)
@@ -312,34 +284,29 @@ def trigger_alarm():
     tk.Label(alarm_win, text="Time's up!", font=("Arial", 40),
              fg="white", bg="black").pack(expand=True)
 
-    def on_snooze():
-        """スヌーズボタン: ポップアップを閉じ、snooze_event をセットしてシーケンスに伝える"""
+    def on_dismiss():
+        """Dismissボタン: ポップアップを閉じ、30秒待ちをスキップさせる
+        (シーケンス自体は続行する仕様)"""
         alarm_win.destroy()
         if snooze_event is not None:
             snooze_event.set()
-        print("Snooze pressed.")
+        print("Dismiss pressed.")
 
-    def on_dismiss():
-        """Dismiss: 全停止"""
-        alarm_win.destroy()
-        if stop_event is not None:
-            stop_event.set()
-        time_label.config(fg="white")
-        print("Alarm dismissed.")
+    def auto_close():
+        if alarm_win.winfo_exists():
+            alarm_win.destroy()
+
+    root.after(30000, auto_close)
 
     btn_frame = tk.Frame(alarm_win, bg="black")
     btn_frame.pack(pady=40)
-    tk.Button(btn_frame, text="Snooze", command=on_snooze,
-              bg="orange", fg="black", font=("Arial", 25),
-              padx=30, pady=15).pack(side=tk.LEFT, padx=20)
     tk.Button(btn_frame, text="Dismiss", command=on_dismiss,
-              bg="#555", fg="white", font=("Arial", 25),
+              bg="orange", fg="black", font=("Arial", 25),
               padx=30, pady=15).pack(side=tk.LEFT, padx=20)
 
     def on_sequence_finish():
         root.after(0, lambda: time_label.config(fg="white"))
 
-    # シーケンスを別スレッドで起動
     alarm_thread = threading.Thread(
         target=alarm_sequence,
         args=(stop_event, snooze_event, on_sequence_finish),
@@ -348,7 +315,6 @@ def trigger_alarm():
     alarm_thread.start()
 
 
-# ── 画面切り替え ──────────────────────────────────────────────────
 def show_setting():
     clock_frame.pack_forget()
     setting_frame.pack(fill="both", expand=True)
@@ -364,29 +330,27 @@ def show_clock():
 # =====================================================================
 root = tk.Tk()
 root.title("Alarm Clock")
-root.attributes("-fullscreen", True)   # 全画面表示
+root.attributes("-fullscreen", True)
 root.configure(bg="black")
-root.bind("<Escape>", lambda e: root.attributes("-fullscreen", False))  # ESCで全画面解除
+root.bind("<Escape>", lambda e: root.attributes("-fullscreen", False))
 
-# ── 1. 時計画面 ───────────────────────────────────────────────────
 clock_frame = tk.Frame(root, bg="black")
 
 time_label = tk.Label(clock_frame, font=("Arial", 80), fg="white", bg="black")
 time_label.pack(expand=True)
 
-btn_setup = tk.Button(clock_frame, text="Set Alarm", command=show_setting,
+btn_setup = tk.Button(clock_frame, text="set alerm time", command=show_setting,
                       bg="#333", fg="white", font=("Arial", 15), padx=20, pady=10)
 btn_setup.pack(pady=20)
 
 clock_frame.pack(fill="both", expand=True)
 
-# ── 2. 設定画面 ───────────────────────────────────────────────────
 setting_frame = tk.Frame(root, bg="black")
 
-tk.Label(setting_frame, text="Set Alarm Time", font=("Arial", 20),
-         fg="white", bg="black").pack(pady=20)
+tk.Label(setting_frame, text="set alerm time", font=("Arial", 20),
+         fg="white", bg="#333").pack(pady=20)
 
-spin_container = tk.Frame(setting_frame, bg="black")
+spin_container = tk.Frame(setting_frame, bg="white")
 spin_container.pack(expand=True)
 
 hour_spin = tk.Spinbox(spin_container, from_=0, to=23, width=3,
@@ -400,12 +364,9 @@ min_spin = tk.Spinbox(spin_container, from_=0, to=59, width=3,
                       font=("Arial", 50), format="%02.0f")
 min_spin.pack(side=tk.LEFT, padx=10)
 
-btn_done = tk.Button(setting_frame, text="Set & Back", command=show_clock,
-                     bg="green", fg="white", font=("Arial", 15), padx=20, pady=10)
+btn_done = tk.Button(setting_frame, text="set and back to clock", command=show_clock,
+                     bg="white", fg="black", font=("Arial", 15), padx=20, pady=10)
 btn_done.pack(pady=30)
 
-# =====================================================================
-#  実行
-# =====================================================================
 update_time()
 root.mainloop()
